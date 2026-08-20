@@ -13,3 +13,7 @@
 .fullSlide img{max-width:100%;max-height:100%;object-fit:contain}
 .fullClose{position:absolute;z-index:2;right:14px;top:max(14px,env(safe-area-inset-top));width:44px;height:44px;border-radius:50%;border:0;background:#fff2;color:#fff;font-size:32px}
 .fullCounter{position:absolute;left:50%;transform:translateX(-50%);bottom:max(18px,env(safe-area-inset-bottom));background:#0009;color:#fff;border-radius:999px;padding:7px 12px;font-size:13px}
+
+.dataTools{display:flex;gap:8px;padding-top:10px}
+.toolBtn{flex:1;border:1px solid #d5d5d8;border-radius:12px;padding:10px 12px;background:#fff;color:#111;font:inherit;font-weight:600}
+.toolBtn:active{transform:scale(.99)}
