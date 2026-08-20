@@ -8,6 +8,60 @@ function getLoc(){return new Promise((res,rej)=>navigator.geolocation.getCurrent
 function showDetail(id){const r=restaurants.find(x=>x.id===id);if(!r)return;const photos=r.photos||[];const gallery=photos.length?`<div class="galleryWrap"><div class="galleryTrack" id="galleryTrack">${photos.map((p,i)=>`<button class="gallerySlide" type="button" data-i="${i}" aria-label="写真 ${i+1}"><img src="${p}" alt="店舗写真 ${i+1}"></button>`).join('')}</div><div class="galleryCounter" id="galleryCounter">1 / ${photos.length}</div></div>`:'';const maps=r.location?`https://maps.apple.com/?daddr=${r.location.lat},${r.location.lon}`:`https://maps.apple.com/?q=${encodeURIComponent(r.address||r.name)}`;$('detail').innerHTML=`${gallery}<div class="detailBody"><h2>${esc(r.name)}</h2><div class="stars">${stars(r.rank)}</div><div class="detailInfo">${esc(r.genre||'')}${r.price?' ・ '+esc(r.price):''}<br>${esc(r.address||'')}<br>${r.phone?esc(r.phone)+'<br>':''}定休日：${esc(r.closedDays||'未設定')}<br>訪問：${esc(r.visitFrequency||'未訪問')}${r.personalRanking?`<br>自分ランキング：${r.personalRanking}位`:''}<br>昼：${r.hours?.lunch?.enabled?`${r.hours.lunch.open}〜${r.hours.lunch.close}`:'営業なし'}<br>夜：${r.hours?.dinner?.enabled?`${r.hours.dinner.open}〜${r.hours.dinner.close}`:'営業なし'}</div><div class="detailActions"><a href="${maps}" target="_blank">地図</a>${r.phone?`<a href="tel:${esc(r.phone)}">電話</a>`:'<button disabled>電話</button>'}<button id="editFromDetail">編集</button></div>${r.note?`<div class="noteBox">${esc(r.note)}</div>`:''}</div>`;$('detailDialog').showModal();if(photos.length){const track=$('galleryTrack'),counter=$('galleryCounter');const update=()=>{const w=track.clientWidth||1,idx=Math.max(0,Math.min(photos.length-1,Math.round(track.scrollLeft/w)));counter.textContent=`${idx+1} / ${photos.length}`};track.addEventListener('scroll',()=>requestAnimationFrame(update),{passive:true});document.querySelectorAll('.gallerySlide').forEach(btn=>btn.onclick=()=>openFullscreenGallery(photos,+btn.dataset.i))}$('editFromDetail').onclick=()=>{$('detailDialog').close();reset(r);$('editorDialog').showModal()}}
 function openFullscreenGallery(photos,startIndex=0){let overlay=document.getElementById('fullscreenGallery');if(overlay)overlay.remove();overlay=document.createElement('div');overlay.id='fullscreenGallery';overlay.className='fullscreenGallery';overlay.innerHTML=`<button class="fullClose" type="button" aria-label="閉じる">×</button><div class="fullTrack" id="fullTrack">${photos.map((p,i)=>`<div class="fullSlide"><img src="${p}" alt="写真 ${i+1}"></div>`).join('')}</div><div class="fullCounter" id="fullCounter">${startIndex+1} / ${photos.length}</div>`;document.body.appendChild(overlay);const track=document.getElementById('fullTrack'),counter=document.getElementById('fullCounter');requestAnimationFrame(()=>{track.scrollLeft=track.clientWidth*startIndex});const update=()=>{const w=track.clientWidth||1,idx=Math.max(0,Math.min(photos.length-1,Math.round(track.scrollLeft/w)));counter.textContent=`${idx+1} / ${photos.length}`};track.addEventListener('scroll',()=>requestAnimationFrame(update),{passive:true});overlay.querySelector('.fullClose').onclick=()=>overlay.remove()}
 
+
+async function listDatabaseNames(){
+  try{
+    if(indexedDB.databases){
+      const dbs=await indexedDB.databases();
+      return (dbs||[]).map(d=>d.name).filter(Boolean);
+    }
+  }catch(e){console.warn(e)}
+  return ['gourmetGuideDB','GourmetGuideDB','gourmet-guide','restaurants'];
+}
+function readStoreFromDatabase(dbName,storeName){
+  return new Promise((resolve)=>{
+    let req;
+    try{req=indexedDB.open(dbName)}catch{return resolve([])}
+    req.onerror=()=>resolve([]);
+    req.onsuccess=()=>{
+      const d=req.result;
+      if(!d.objectStoreNames.contains(storeName)){d.close();return resolve([])}
+      try{
+        const t=d.transaction(storeName,'readonly');
+        const s=t.objectStore(storeName);
+        const r=s.getAll();
+        r.onsuccess=()=>{const v=r.result||[];d.close();resolve(v)};
+        r.onerror=()=>{d.close();resolve([])};
+      }catch{d.close();resolve([])}
+    };
+  });
+}
+async function recoverLegacyData(){
+  const names=[...new Set(await listDatabaseNames())];
+  const candidates=[];
+  for(const n of names){
+    for(const store of ['restaurants','restaurant','stores']){
+      const rows=await readStoreFromDatabase(n,store);
+      if(rows.length)candidates.push({db:n,store,rows});
+    }
+  }
+  if(!candidates.length){
+    alert('このアプリ領域では旧データを見つけられませんでした。\nバックアップJSONがある場合は「復元」を使ってください。');
+    return;
+  }
+  candidates.sort((a,b)=>b.rows.length-a.rows.length);
+  const best=candidates[0];
+  const rows=best.rows.filter(r=>r&&r.id&&r.name);
+  if(!rows.length){
+    alert('データベースは見つかりましたが、店舗データを読み取れませんでした。');
+    return;
+  }
+  if(!confirm(`${rows.length}件の旧店舗データを見つけました。\n現在のデータに取り込みますか？`))return;
+  for(const r of rows)await put(r);
+  await refresh();
+  alert(`${rows.length}件を復旧しました。すぐに「バックアップ」を押して保存してください。`);
+}
+
 function makeBackupPayload(){
   return {
     app:"My Gourmet Guide",
@@ -63,4 +117,5 @@ async function restoreBackupFile(file){
 document.addEventListener('DOMContentLoaded',async()=>{for(const id of['lunchOpen','lunchClose','dinnerOpen','dinnerClose'])fill(id,times());$('personalRanking').innerHTML='<option value="">なし</option>'+Array.from({length:50},(_,i)=>`<option value="${i+1}">${i+1}位</option>`).join('');await openDB();await refresh();
 $('backupBtn').onclick=()=>{if(!restaurants.length){alert('バックアップする店舗がありません。');return;}downloadBackup();};
 $('restoreBtn').onclick=()=>$('restoreFile').click();
+$('recoverBtn').onclick=()=>recoverLegacyData();
 $('restoreFile').onchange=async e=>{const f=e.target.files?.[0];if(f)await restoreBackupFile(f);e.target.value='';};$('addBtn').onclick=()=>{reset();$('editorDialog').showModal()};$('cancelBtn').onclick=()=>$('editorDialog').close();$('closeDetailBtn').onclick=()=>$('detailDialog').close();$('search').oninput=render;$('genreFilter').onchange=render;document.querySelectorAll('.chip').forEach(b=>b.onclick=async()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentFilter=b.dataset.filter;if(currentFilter==='near'&&!currentLocation){try{currentLocation=await getLoc();$('status').textContent='現在地から5km以内を表示しています。'}catch{$('status').textContent='位置情報を取得できませんでした。'}}else $('status').textContent='';render()});$('useLocationBtn').onclick=async()=>{try{currentEditLocation=await getLoc();locLabel()}catch{alert('位置情報を取得できませんでした。')}};$('clearLocationBtn').onclick=()=>{currentEditLocation=null;locLabel()};$('photos').onchange=async e=>{for(const f of [...e.target.files].slice(0,20-editingPhotos.length))editingPhotos.push(await fileURL(f));e.target.value='';renderPhotos()};$('editorForm').onsubmit=async e=>{e.preventDefault();const id=$('restaurantId').value||crypto.randomUUID();await put({id,name:$('name').value.trim(),address:$('address').value.trim(),phone:$('phone').value.trim(),closedDays:$('closedDays').value.trim(),rank:+$('rank').value,visitFrequency:$('visitFrequency').value,genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),favorite:$('favorite').checked,personalRanking:$('personalRanking').value?+$('personalRanking').value:null,location:currentEditLocation,photos:editingPhotos,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=13').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
