@@ -1,0 +1,18 @@
+# My グルメガイド（GitHub Pages / PWA）
+
+XcodeなしでGitHub Pagesに公開し、iPhoneのSafariからホーム画面へ追加して使う版です。
+
+## 主な機能
+店舗名、住所、電話、定休日、★1〜5、ジャンル、価格、備考・感想、複数写真、写真削除、店舗削除、お気に入り、自分ランキング1〜50位、未訪問/1〜5回/常連、昼/夜の営業時間、現在地取得、5km以内表示、Appleマップ連携、電話発信、オフライン起動。
+
+## GitHub Pagesへの公開
+1. GitHubで新しいリポジトリを作成。
+2. このZIPの中身をすべてリポジトリのルートにアップロード。
+3. Settings → Pages。
+4. Sourceを Deploy from a branch。
+5. Branchを main、Folderを /(root) にして Save。
+6. 数分後の公開URLをiPhoneのSafariで開く。
+7. Safariの共有 → ホーム画面に追加。
+
+## 保存について
+データはiPhoneのブラウザ内（IndexedDB）に保存します。GitHubには店舗データを保存しません。Safariのサイトデータを削除すると登録データが消える可能性があります。複数端末同期は未実装です。

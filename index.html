@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Myグルメガイド">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <title>My グルメガイド</title>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div><div class="eyebrow">MY GOURMET GUIDE</div><h1>My グルメガイド</h1></div>
+    <button id="addBtn" class="iconBtn">＋</button>
+  </header>
+  <section class="toolbar">
+    <input id="search" type="search" placeholder="店名・住所・ジャンル・備考">
+    <div class="chips">
+      <button data-filter="all" class="chip active">すべて</button>
+      <button data-filter="near" class="chip">近く</button>
+      <button data-filter="favorite" class="chip">お気に入り</button>
+      <button data-filter="ranked" class="chip">ランキング</button>
+    </div>
+  </section>
+  <main><section id="status" class="status"></section><section id="list" class="list"></section>
+  <section id="empty" class="empty hidden"><div class="emptyIcon">🍴</div><h2>まだお店がありません</h2><p>右上の＋から最初のお店を登録してください。</p></section></main>
+</div>
+<dialog id="editorDialog"><form id="editorForm" method="dialog">
+  <div class="dialogHeader"><button type="button" id="cancelBtn" class="textBtn">キャンセル</button><strong id="dialogTitle">店舗登録</strong><button type="submit" class="textBtn strong">保存</button></div>
+  <input type="hidden" id="restaurantId">
+  <label>店舗名<input id="name" required></label>
+  <label>住所<input id="address"></label>
+  <div class="two"><label>電話<input id="phone" inputmode="tel"></label><label>定休日<input id="closedDays" placeholder="例：火曜"></label></div>
+  <div class="two"><label>ランク<select id="rank"><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></label>
+  <label>訪問回数<select id="visitFrequency"><option>未訪問</option><option>1回</option><option>2回</option><option>3回</option><option>4回</option><option>5回</option><option>常連</option></select></label></div>
+  <div class="two"><label>ジャンル<select id="genre"><option value="">未選択</option><option>ラーメン</option><option>うどん・そば</option><option>寿司</option><option>焼肉</option><option>中華</option><option>洋食</option><option>和食</option><option>居酒屋</option><option>カフェ</option><option>スイーツ</option><option>カレー</option><option>その他</option></select></label>
+  <label>価格<select id="price"><option value="">未選択</option><option>〜1,000円</option><option>1,000〜2,000円</option><option>2,000〜3,000円</option><option>3,000〜5,000円</option><option>5,000〜10,000円</option><option>10,000円〜</option></select></label></div>
+  <fieldset><legend>営業時間</legend><div class="hoursRow"><label class="inlineCheck"><input type="checkbox" id="lunchEnabled" checked> 昼の部</label><select id="lunchOpen"></select><span>〜</span><select id="lunchClose"></select></div><div class="hoursRow"><label class="inlineCheck"><input type="checkbox" id="dinnerEnabled" checked> 夜の部</label><select id="dinnerOpen"></select><span>〜</span><select id="dinnerClose"></select></div></fieldset>
+  <div class="two"><label class="inlineCheck block"><input type="checkbox" id="favorite"> お気に入り</label><label>自分ランキング<select id="personalRanking"><option value="">なし</option></select></label></div>
+  <label>備考・感想<textarea id="note" rows="5" placeholder="味の感想、おすすめ料理、駐車場など"></textarea></label>
+  <fieldset><legend>位置情報</legend><div class="rowBtns"><button type="button" id="useLocationBtn" class="secondary">現在地を登録</button><button type="button" id="clearLocationBtn" class="secondary">位置を削除</button></div><div id="locationLabel" class="muted">位置情報なし</div></fieldset>
+  <fieldset><legend>写真（複数可）</legend><input id="photos" type="file" accept="image/*" multiple><div id="photoPreview" class="photoGrid"></div></fieldset>
+  <div class="dangerZone"><button type="button" id="deleteRestaurantBtn" class="danger hidden">この店舗を削除</button></div>
+</form></dialog>
+<dialog id="detailDialog"><div id="detail"></div><button id="closeDetailBtn" class="fullBtn">閉じる</button></dialog>
+<script src="app.js"></script></body></html>
