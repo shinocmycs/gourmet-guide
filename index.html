@@ -20,6 +20,17 @@
   </header>
   <section class="toolbar">
     <input id="search" type="search" placeholder="店名・住所・ジャンル・備考">
+    <div class="summaryRow">
+      <div id="countLabel" class="countLabel">登録店舗：0件</div>
+      <label class="genreFilterLabel">ジャンル
+        <select id="genreFilter">
+          <option value="">すべて</option>
+          <option>ラーメン</option><option>うどん・そば</option><option>寿司</option><option>焼肉</option>
+          <option>中華</option><option>洋食</option><option>和食</option><option>居酒屋</option>
+          <option>カフェ</option><option>スイーツ</option><option>カレー</option><option>その他</option>
+        </select>
+      </label>
+    </div>
     <div class="chips">
       <button data-filter="all" class="chip active">すべて</button>
       <button data-filter="near" class="chip">近く</button>
