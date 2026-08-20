@@ -17,3 +17,9 @@
 .dataTools{display:flex;gap:8px;padding-top:10px}
 .toolBtn{flex:1;border:1px solid #d5d5d8;border-radius:12px;padding:10px 12px;background:#fff;color:#111;font:inherit;font-weight:600}
 .toolBtn:active{transform:scale(.99)}
+
+.summaryRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px}
+.countLabel{font-size:14px;font-weight:700;color:#333;white-space:nowrap}
+.genreFilterLabel{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;color:#666}
+.genreFilterLabel select{width:auto;min-width:128px;padding:8px 30px 8px 10px;border-radius:10px}
+@media(max-width:480px){.summaryRow{align-items:flex-end}.genreFilterLabel{flex-direction:column;align-items:flex-start;gap:3px}.genreFilterLabel select{min-width:135px}}
