@@ -23,3 +23,8 @@
 .genreFilterLabel{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;color:#666}
 .genreFilterLabel select{width:auto;min-width:128px;padding:8px 30px 8px 10px;border-radius:10px}
 @media(max-width:480px){.summaryRow{align-items:flex-end}.genreFilterLabel{flex-direction:column;align-items:flex-start;gap:3px}.genreFilterLabel select{min-width:135px}}
+
+.photoBusy{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:24px}
+.photoBusy.hidden{display:none}.photoBusyBox{background:#fff;border-radius:20px;padding:22px 26px;min-width:240px;text-align:center;font-weight:700;box-shadow:0 14px 50px rgba(0,0,0,.22)}
+.photoBusySpinner{width:34px;height:34px;border:4px solid #ddd;border-top-color:#111;border-radius:50%;margin:0 auto 14px;animation:photoSpin .8s linear infinite}
+@keyframes photoSpin{to{transform:rotate(360deg)}}
