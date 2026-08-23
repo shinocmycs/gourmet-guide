@@ -38,3 +38,7 @@
 @media(max-width:480px){.tabelogTools{grid-template-columns:1fr}}
 
 .locationBtns{flex-wrap:wrap}.locationBtns .secondary{flex:1;min-width:120px}
+
+#bulkGeoStatus{padding:8px 2px;white-space:pre-line}
+#bulkGeocodeBtn:disabled{opacity:.55}
+.dataTools{flex-wrap:wrap}

@@ -165,6 +165,72 @@ async function migrateGeoFields(){
   return changed;
 }
 
+
+let bulkGeoRunning=false;
+
+async function bulkGeocodeMissing(){
+  if(bulkGeoRunning)return;
+
+  const targets=restaurants.filter(r=>{
+    const address=(r.address||'').trim();
+    return address && !coordsOf(r);
+  });
+
+  if(!targets.length){
+    alert('住所が登録されている店舗は、すべて位置情報登録済みです。');
+    return;
+  }
+
+  if(!confirm(`${targets.length}店舗の住所から位置情報を順番に取得します。\n成功した店舗は1件ずつ保存されます。\n開始しますか？`))return;
+
+  bulkGeoRunning=true;
+  const btn=$('bulkGeocodeBtn');
+  if(btn)btn.disabled=true;
+
+  let ok=0,ng=0;
+  const failed=[];
+
+  try{
+    for(let i=0;i<targets.length;i++){
+      const light=targets[i];
+      const full=await getOne(light.id);
+      if(!full){ng++;continue;}
+
+      if($('bulkGeoStatus')){
+        $('bulkGeoStatus').textContent=`位置登録中 ${i+1}/${targets.length}　成功 ${ok}件　失敗 ${ng}件\n${full.name}`;
+      }
+
+      try{
+        const pos=await geocodeAddress(full.address);
+        full.location=pos;
+        full.geoLat=Number(pos.lat);
+        full.geoLon=Number(pos.lon);
+        full.geoAddress=(full.address||'').trim();
+        full.updatedAt=Date.now();
+        await put(full);
+        ok++;
+      }catch(err){
+        ng++;
+        failed.push(full.name);
+        console.warn('bulk geocode failed',full.name,full.address,err);
+      }
+
+      // 画面を固めず、順番に処理。
+      await new Promise(r=>setTimeout(r,500));
+    }
+  }finally{
+    bulkGeoRunning=false;
+    if(btn)btn.disabled=false;
+    await refresh();
+
+    const registered=restaurants.filter(r=>coordsOf(r)).length;
+    const summary=`位置登録完了：成功 ${ok}件 / 失敗 ${ng}件\n位置登録済み ${registered} / ${restaurants.length}件`;
+    if($('bulkGeoStatus'))$('bulkGeoStatus').textContent=summary;
+
+    alert(summary+(failed.length?`\n\n取得できなかった店舗例：\n${failed.slice(0,8).join('\n')}`:''));
+  }
+}
+
 document.addEventListener('DOMContentLoaded',async()=>{for(const id of['lunchOpen','lunchClose','dinnerOpen','dinnerClose'])fill(id,times());$('personalRanking').innerHTML='<option value="">なし</option>'+Array.from({length:50},(_,i)=>`<option value="${i+1}">${i+1}位</option>`).join('');await openDB();await migrateGeoFields();if($('status'))$('status').textContent='初回のみ：写真データを軽量化しています…';const mig=await optimizeExistingPhotos();await refresh();if($('status'))$('status').textContent='';if(mig.stores)setTimeout(()=>alert(`${mig.stores}店舗・${mig.pics}枚の写真を軽量化しました。\n店舗データはそのままです。`),300);
 
 if($('searchTabelogBtn'))$('searchTabelogBtn').onclick=()=>{
@@ -196,6 +262,7 @@ if($('pasteTabelogBtn'))$('pasteTabelogBtn').onclick=async()=>{
 
 $('backupBtn').onclick=async()=>{if(!restaurants.length){alert('バックアップする店舗がありません。');return;}await downloadBackup();};
 $('restoreBtn').onclick=()=>$('restoreFile').click();
+if($('bulkGeocodeBtn'))$('bulkGeocodeBtn').onclick=()=>bulkGeocodeMissing();
 $('restoreFile').onchange=async e=>{const f=e.target.files?.[0];if(f)await restoreBackupFile(f);e.target.value='';};$('addBtn').onclick=()=>{reset();$('editorDialog').showModal()};$('cancelBtn').onclick=()=>$('editorDialog').close();$('closeDetailBtn').onclick=()=>$('detailDialog').close();$('search').oninput=render;if($('genreFilter'))$('genreFilter').onchange=render;document.querySelectorAll('.chip').forEach(b=>b.onclick=async()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentFilter=b.dataset.filter;if(currentFilter==='near'&&!currentLocation){try{currentLocation=await getLoc();}catch{$('status').textContent='現在地を取得できませんでした。位置情報の許可を確認してください。';render();return;}}if(currentFilter==='near'){const located=restaurants.filter(r=>coordsOf(r)).length;$('status').textContent=`現在地から5km以内を表示。位置登録済み ${located} / ${restaurants.length}件`;}else $('status').textContent='';render()});
 if($('geocodeAddressBtn'))$('geocodeAddressBtn').onclick=async()=>{
   const address=$('address')?.value.trim()||'';
@@ -260,4 +327,4 @@ ${address}${normalized}
 geoLat:(currentEditLocation?.addressSource===$('address').value.trim()?Number(currentEditLocation.lat):null),
 geoLon:(currentEditLocation?.addressSource===$('address').value.trim()?Number(currentEditLocation.lon):null),
 geoAddress:(currentEditLocation?.addressSource===$('address').value.trim()?$('address').value.trim():''),
-photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=1126').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
+photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=1130').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});

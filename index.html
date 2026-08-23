@@ -41,8 +41,10 @@
     <div class="dataTools">
       <button id="backupBtn" class="toolBtn" type="button">バックアップ</button>
       <button id="restoreBtn" class="toolBtn" type="button">復元</button>
+      <button id="bulkGeocodeBtn" class="toolBtn" type="button">住所から位置を一括登録</button>
       <input id="restoreFile" type="file" accept="application/json,.json" hidden>
     </div>
+    <div id="bulkGeoStatus" class="status"></div>
   </section>
   <main><section id="status" class="status"></section><section id="list" class="list"></section>
   <section id="empty" class="empty hidden"><div class="emptyIcon">🍴</div><h2>まだお店がありません</h2><p>右上の＋から最初のお店を登録してください。</p></section></main>
