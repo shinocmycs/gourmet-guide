@@ -87,64 +87,58 @@ async function restoreBackupFile(file){
 }
 
 async function geocodeAddress(address){
-  const raw=(address||'').trim()
-    .replace(/〒?\s*\d{3}-?\d{4}\s*/g,'')
-    .replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))
-    .replace(/\s+/g,'');
+  const raw=(address||'').trim();
   if(!raw)throw new Error('住所が入力されていません。');
 
-  // Geoloniaの日本住所APIから都道府県→市区町村→町丁目の代表点を取得。
-  const prefResp=await fetch('https://geolonia.github.io/japanese-addresses/api/ja.json',{cache:'force-cache'});
-  if(!prefResp.ok)throw new Error('住所データを取得できませんでした。');
-  const prefs=await prefResp.json();
-
-  const pref=Object.keys(prefs).find(p=>raw.startsWith(p));
-  if(!pref)throw new Error('都道府県を判別できませんでした。住所を都道府県から入力してください。');
-
-  const afterPref=raw.slice(pref.length);
-  const cities=(prefs[pref]||[]).slice().sort((a,b)=>b.length-a.length);
-  const city=cities.find(c=>afterPref.startsWith(c));
-  if(!city)throw new Error('市区町村を判別できませんでした。');
-
-  const rest=afterPref.slice(city.length);
-  const townUrl=`https://geolonia.github.io/japanese-addresses/api/ja/${encodeURIComponent(pref)}/${encodeURIComponent(city)}.json`;
-  const townResp=await fetch(townUrl,{cache:'force-cache'});
-  if(!townResp.ok)throw new Error('町丁目データを取得できませんでした。');
-  const towns=await townResp.json();
-
-  // 住所文字列に最も長く一致する町丁目を優先。
-  let best=null, bestLen=-1;
-  for(const t of towns){
-    const names=[t.koaza,t.town].filter(Boolean);
-    for(const name of names){
-      if(rest.startsWith(name) && name.length>bestLen){
-        best=t;bestLen=name.length;
-      }
-    }
+  if(typeof window.getLatLng!=='function'){
+    throw new Error('住所検索機能を読み込めませんでした。通信状態を確認してアプリを再起動してください。');
   }
-  // 完全な先頭一致がない場合、町名を含む候補にフォールバック。
-  if(!best){
-    for(const t of towns){
-      const names=[t.koaza,t.town].filter(Boolean);
-      for(const name of names){
-        if(rest.includes(name) && name.length>bestLen){
-          best=t;bestLen=name.length;
+
+  return await new Promise((resolve,reject)=>{
+    let settled=false;
+    const timer=setTimeout(()=>{
+      if(settled)return;
+      settled=true;
+      reject(new Error('住所検索がタイムアウトしました。もう一度お試しください。'));
+    },15000);
+
+    try{
+      window.getLatLng(
+        raw,
+        result=>{
+          if(settled)return;
+          settled=true;
+          clearTimeout(timer);
+          const lat=Number(result?.lat);
+          const lon=Number(result?.lng);
+          if(!Number.isFinite(lat)||!Number.isFinite(lon)){
+            reject(new Error('住所から位置を取得できませんでした。'));
+            return;
+          }
+          resolve({
+            lat,
+            lon,
+            addressSource:raw,
+            geocodeProvider:'geolonia-community-geocoder',
+            geocodeLevel:Number(result?.level)||0,
+            normalizedAddress:[result?.pref,result?.city,result?.town,result?.addr].filter(Boolean).join(''),
+            geocodedAt:Date.now()
+          });
+        },
+        error=>{
+          if(settled)return;
+          settled=true;
+          clearTimeout(timer);
+          reject(new Error('住所から位置を取得できませんでした。住所表記を確認してください。'));
         }
-      }
+      );
+    }catch(e){
+      if(settled)return;
+      settled=true;
+      clearTimeout(timer);
+      reject(e);
     }
-  }
-
-  if(!best || !Number.isFinite(Number(best.lat)) || !Number.isFinite(Number(best.lng))){
-    throw new Error('町丁目までの位置を取得できませんでした。住所表記を確認してください。');
-  }
-
-  return {
-    lat:Number(best.lat),
-    lon:Number(best.lng),
-    addressSource:(address||'').trim(),
-    geocodeProvider:'geolonia',
-    geocodedAt:Date.now()
-  };
+  });
 }
 document.addEventListener('DOMContentLoaded',async()=>{for(const id of['lunchOpen','lunchClose','dinnerOpen','dinnerClose'])fill(id,times());$('personalRanking').innerHTML='<option value="">なし</option>'+Array.from({length:50},(_,i)=>`<option value="${i+1}">${i+1}位</option>`).join('');await openDB();if($('status'))$('status').textContent='初回のみ：写真データを軽量化しています…';const mig=await optimizeExistingPhotos();await refresh();if($('status'))$('status').textContent='';if(mig.stores)setTimeout(()=>alert(`${mig.stores}店舗・${mig.pics}枚の写真を軽量化しました。\n店舗データはそのままです。`),300);
 
@@ -181,13 +175,13 @@ $('restoreFile').onchange=async e=>{const f=e.target.files?.[0];if(f)await resto
 if($('geocodeAddressBtn'))$('geocodeAddressBtn').onclick=async()=>{
   const address=$('address')?.value.trim()||'';
   const id=$('restaurantId')?.value||'';
-  if(!address){alert('住所が登録されていません。先に住所を入力してください。');return;}
+  if(!address){alert('先に店舗住所を入力してください。');return;}
 
   currentEditLocation=null;
   locLabel();
 
   try{
-    if(typeof photoBusy==='function')photoBusy(true,'登録住所から位置情報を検索しています…');
+    if(typeof photoBusy==='function')photoBusy(true,'登録住所を検索しています…');
     const pos=await geocodeAddress(address);
     currentEditLocation=pos;
     locLabel();
@@ -202,10 +196,14 @@ if($('geocodeAddressBtn'))$('geocodeAddressBtn').onclick=async()=>{
         await refresh();
       }
     }
-    alert(`住所から位置情報を登録しました。
-${address}
 
-「近く」検索に利用できます。`);
+    const normalized=pos.normalizedAddress?`
+検索結果：${pos.normalizedAddress}`:'';
+    alert(`位置情報を登録しました。
+${address}${normalized}
+
+緯度 ${pos.lat.toFixed(6)}
+経度 ${pos.lon.toFixed(6)}`);
   }catch(err){
     currentEditLocation=null;
     locLabel();
@@ -230,4 +228,4 @@ ${address}
  }
  photoBusy(false);renderPhotos();
  if(ng)alert(`${ok}枚を読み込みました。\n${ng}枚はクラウドから取得できませんでした。\n取得できない写真は一度iPhoneの「写真」へ保存してから選択してください。`);
-};$('editorForm').onsubmit=async e=>{e.preventDefault();const id=$('restaurantId').value||crypto.randomUUID();await put({id,name:$('name').value.trim(),address:$('address').value.trim(),phone:$('phone').value.trim(),closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),rank:+$('rank').value,visitFrequency:$('visitFrequency').value,genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),favorite:$('favorite').checked,personalRanking:$('personalRanking').value?+$('personalRanking').value:null,location:(currentEditLocation?.addressSource===$('address').value.trim()?currentEditLocation:null),photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=1124').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
+};$('editorForm').onsubmit=async e=>{e.preventDefault();const id=$('restaurantId').value||crypto.randomUUID();await put({id,name:$('name').value.trim(),address:$('address').value.trim(),phone:$('phone').value.trim(),closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),rank:+$('rank').value,visitFrequency:$('visitFrequency').value,genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),favorite:$('favorite').checked,personalRanking:$('personalRanking').value?+$('personalRanking').value:null,location:(currentEditLocation?.addressSource===$('address').value.trim()?currentEditLocation:null),photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=1125').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
