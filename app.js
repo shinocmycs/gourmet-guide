@@ -18,7 +18,7 @@ async function refresh(){restaurants=await loadAllLight();render()}function rend
 function times(){const a=[];for(let h=5;h<=29;h++)for(const m of[0,30])a.push(`${String(h%24).padStart(2,'0')}:${String(m).padStart(2,'0')}`);return a}function fill(id,vals){$(id).innerHTML=vals.map(v=>`<option>${v}</option>`).join('')}function locLabel(){$('locationLabel').textContent=currentEditLocation?`住所から登録：緯度 ${currentEditLocation.lat.toFixed(5)} / 経度 ${currentEditLocation.lon.toFixed(5)}`:'住所位置情報：未登録'}function renderPhotos(){$('photoPreview').innerHTML=editingPhotos.map((p,i)=>`<div class="photoWrap"><img src="${p}"><button type="button" class="photoDelete" data-i="${i}">×</button></div>`).join('');document.querySelectorAll('.photoDelete').forEach(b=>b.onclick=()=>{editingPhotos.splice(+b.dataset.i,1);renderPhotos()})}
 function reset(r=null){for(const k of['name','address','phone','closedDays','note','tabelogUrl']){const el=$(k);if(el)el.value=r?.[k]||'';}$('restaurantId').value=r?.id||'';$('rank').value=r?.rank||3;$('visitFrequency').value=r?.visitFrequency||'未訪問';$('genre').value=r?.genre||'';$('price').value=r?.price||'';$('favorite').checked=!!r?.favorite;$('personalRanking').value=r?.personalRanking||'';$('lunchEnabled').checked=r?.hours?.lunch?.enabled??true;$('lunchOpen').value=r?.hours?.lunch?.open||'11:00';$('lunchClose').value=r?.hours?.lunch?.close||'14:30';$('dinnerEnabled').checked=r?.hours?.dinner?.enabled??true;$('dinnerOpen').value=r?.hours?.dinner?.open||'17:00';$('dinnerClose').value=r?.hours?.dinner?.close||'21:00';currentEditLocation=(r?.location?.addressSource&&r.location.addressSource===(r?.address||'').trim())?r.location:null;editingPhotos=[...(r?.photos||[])];locLabel();renderPhotos();$('deleteRestaurantBtn').classList.toggle('hidden',!r);$('dialogTitle').textContent=r?'店舗編集':'店舗登録'}
 function getLoc(){return new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lon:p.coords.longitude}),rej,{enableHighAccuracy:true,timeout:12000,maximumAge:30000}))}function fileURL(f){return new Promise((res,rej)=>{const rd=new FileReader();rd.onload=()=>res(rd.result);rd.onerror=rej;rd.readAsDataURL(f)})}
-async function showDetail(id){const r=await getOne(id);if(!r)return;const photos=r.photos||[];const gallery=photos.length?`<div class="galleryWrap"><div class="galleryTrack" id="galleryTrack">${photos.map((p,i)=>`<button class="gallerySlide" type="button" data-i="${i}" aria-label="写真 ${i+1}"><img src="${p}" alt="店舗写真 ${i+1}"></button>`).join('')}</div><div class="galleryCounter" id="galleryCounter">1 / ${photos.length}</div></div>`:'';const maps=r.location?`https://maps.apple.com/?daddr=${r.location.lat},${r.location.lon}`:`https://maps.apple.com/?q=${encodeURIComponent(r.address||r.name)}`;$('detail').innerHTML=`${gallery}<div class="detailBody"><h2>${esc(r.name)}</h2><div class="stars">${stars(r.rank)}</div><div class="detailInfo">${esc(r.genre||'')}${r.price?' ・ '+esc(r.price):''}<br>${esc(r.address||'')}<br>${r.phone?esc(r.phone)+'<br>':''}定休日：${esc(r.closedDays||'未設定')}<br>訪問：${esc(r.visitFrequency||'未訪問')}${r.personalRanking?`<br>自分ランキング：${r.personalRanking}位`:''}<br>昼：${r.hours?.lunch?.enabled?`${r.hours.lunch.open}〜${r.hours.lunch.close}`:'営業なし'}<br>夜：${r.hours?.dinner?.enabled?`${r.hours.dinner.open}〜${r.hours.dinner.close}`:'営業なし'}</div><div class="detailActions fourActions"><a href="${maps}" target="_blank">地図</a>${r.phone?`<a href="tel:${esc(r.phone)}">電話</a>`:'<button disabled>電話</button>'}${r.tabelogUrl?`<a href="${esc(r.tabelogUrl)}" target="_blank" rel="noopener">食べログ</a>`:'<button disabled>食べログ</button>'}<button id="editFromDetail">編集</button></div>${r.note?`<div class="noteBox">${esc(r.note)}</div>`:''}</div>`;$('detailDialog').showModal();if(photos.length){const track=$('galleryTrack'),counter=$('galleryCounter');const update=()=>{const w=track.clientWidth||1,idx=Math.max(0,Math.min(photos.length-1,Math.round(track.scrollLeft/w)));counter.textContent=`${idx+1} / ${photos.length}`};track.addEventListener('scroll',()=>requestAnimationFrame(update),{passive:true});document.querySelectorAll('.gallerySlide').forEach(btn=>btn.onclick=()=>openFullscreenGallery(photos,+btn.dataset.i))}$('editFromDetail').onclick=async()=>{
+async function showDetail(id){const r=await getOne(id);if(!r)return;const photos=r.photos||[];const gallery=photos.length?`<div class="galleryWrap"><div class="galleryTrack" id="galleryTrack">${photos.map((p,i)=>`<button class="gallerySlide" type="button" data-i="${i}" aria-label="写真 ${i+1}"><img src="${p}" alt="店舗写真 ${i+1}"></button>`).join('')}</div><div class="galleryCounter" id="galleryCounter">1 / ${photos.length}</div></div>`:'';const maps=`https://maps.apple.com/?q=${encodeURIComponent(r.address||r.name)}`;$('detail').innerHTML=`${gallery}<div class="detailBody"><h2>${esc(r.name)}</h2><div class="stars">${stars(r.rank)}</div><div class="detailInfo">${esc(r.genre||'')}${r.price?' ・ '+esc(r.price):''}<br>${esc(r.address||'')}<br>${r.phone?esc(r.phone)+'<br>':''}定休日：${esc(r.closedDays||'未設定')}<br>訪問：${esc(r.visitFrequency||'未訪問')}${r.personalRanking?`<br>自分ランキング：${r.personalRanking}位`:''}<br>昼：${r.hours?.lunch?.enabled?`${r.hours.lunch.open}〜${r.hours.lunch.close}`:'営業なし'}<br>夜：${r.hours?.dinner?.enabled?`${r.hours.dinner.open}〜${r.hours.dinner.close}`:'営業なし'}</div><div class="detailActions fourActions"><a href="${maps}" target="_blank">地図</a>${r.phone?`<a href="tel:${esc(r.phone)}">電話</a>`:'<button disabled>電話</button>'}${r.tabelogUrl?`<a href="${esc(r.tabelogUrl)}" target="_blank" rel="noopener">食べログ</a>`:'<button disabled>食べログ</button>'}<button id="editFromDetail">編集</button></div>${r.note?`<div class="noteBox">${esc(r.note)}</div>`:''}</div>`;$('detailDialog').showModal();if(photos.length){const track=$('galleryTrack'),counter=$('galleryCounter');const update=()=>{const w=track.clientWidth||1,idx=Math.max(0,Math.min(photos.length-1,Math.round(track.scrollLeft/w)));counter.textContent=`${idx+1} / ${photos.length}`};track.addEventListener('scroll',()=>requestAnimationFrame(update),{passive:true});document.querySelectorAll('.gallerySlide').forEach(btn=>btn.onclick=()=>openFullscreenGallery(photos,+btn.dataset.i))}$('editFromDetail').onclick=async()=>{
   try{
     const fresh=await getOne(r.id);
     $('detailDialog').close();
@@ -87,17 +87,27 @@ async function restoreBackupFile(file){
 }
 
 async function geocodeAddress(address){
-  const q=(address||'').trim();
-  if(!q)throw new Error('住所が入力されていません。');
-  // 国土地理院の住所検索API。GPS/現在地は一切使用しない。
-  const url=`https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(q)}`;
-  const resp=await fetch(url,{cache:'no-store'});
-  if(!resp.ok)throw new Error('住所検索に失敗しました。');
-  const data=await resp.json();
-  if(!Array.isArray(data)||!data.length||!data[0]?.geometry?.coordinates)throw new Error('この住所の位置を見つけられませんでした。住所を都道府県から入力して再度お試しください。');
-  const [lon,lat]=data[0].geometry.coordinates.map(Number);
-  if(!Number.isFinite(lat)||!Number.isFinite(lon))throw new Error('住所の位置情報が正しく取得できませんでした。');
-  return {lat,lon,addressSource:q};
+  const raw=(address||'').trim();
+  if(!raw)throw new Error('住所が入力されていません。');
+  const candidates=[raw];
+  const noPost=raw.replace(/〒?\s*\d{3}-?\d{4}\s*/g,'').trim();
+  if(noPost&&!candidates.includes(noPost))candidates.push(noPost);
+  const simple=noPost.replace(/\s+[^\s]+(?:ビル|マンション|ハイツ|コーポ|号室|階).*$/,'').trim();
+  if(simple&&!candidates.includes(simple))candidates.push(simple);
+
+  for(const q of candidates){
+    try{
+      const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=jp&accept-language=ja&q=${encodeURIComponent(q)}`;
+      const resp=await fetch(url,{cache:'no-store',headers:{'Accept':'application/json'}});
+      if(!resp.ok)continue;
+      const data=await resp.json();
+      if(Array.isArray(data)&&data.length){
+        const lat=Number(data[0].lat),lon=Number(data[0].lon);
+        if(Number.isFinite(lat)&&Number.isFinite(lon))return {lat,lon,addressSource:raw,geocodedAt:Date.now()};
+      }
+    }catch(e){console.warn('geocode failed',q,e)}
+  }
+  throw new Error('住所から位置を取得できませんでした。都道府県・市区町村・番地まで入力して再度お試しください。');
 }
 document.addEventListener('DOMContentLoaded',async()=>{for(const id of['lunchOpen','lunchClose','dinnerOpen','dinnerClose'])fill(id,times());$('personalRanking').innerHTML='<option value="">なし</option>'+Array.from({length:50},(_,i)=>`<option value="${i+1}">${i+1}位</option>`).join('');await openDB();if($('status'))$('status').textContent='初回のみ：写真データを軽量化しています…';const mig=await optimizeExistingPhotos();await refresh();if($('status'))$('status').textContent='';if(mig.stores)setTimeout(()=>alert(`${mig.stores}店舗・${mig.pics}枚の写真を軽量化しました。\n店舗データはそのままです。`),300);
 
@@ -133,18 +143,36 @@ $('restoreBtn').onclick=()=>$('restoreFile').click();
 $('restoreFile').onchange=async e=>{const f=e.target.files?.[0];if(f)await restoreBackupFile(f);e.target.value='';};$('addBtn').onclick=()=>{reset();$('editorDialog').showModal()};$('cancelBtn').onclick=()=>$('editorDialog').close();$('closeDetailBtn').onclick=()=>$('detailDialog').close();$('search').oninput=render;if($('genreFilter'))$('genreFilter').onchange=render;document.querySelectorAll('.chip').forEach(b=>b.onclick=async()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentFilter=b.dataset.filter;if(currentFilter==='near'&&!currentLocation){try{currentLocation=await getLoc();}catch{$('status').textContent='現在地を取得できませんでした。位置情報の許可を確認してください。';render();return;}}if(currentFilter==='near'){const located=restaurants.filter(r=>r.location).length;$('status').textContent=`現在地から5km以内を表示。位置登録済み ${located} / ${restaurants.length}件`;}else $('status').textContent='';render()});
 if($('geocodeAddressBtn'))$('geocodeAddressBtn').onclick=async()=>{
   const address=$('address')?.value.trim()||'';
+  const id=$('restaurantId')?.value||'';
   if(!address){alert('住所が登録されていません。先に住所を入力してください。');return;}
+
+  currentEditLocation=null;
+  locLabel();
+
   try{
-    if(typeof photoBusy==='function')photoBusy(true,'登録住所から位置情報を取得しています…');
+    if(typeof photoBusy==='function')photoBusy(true,'登録住所から位置情報を検索しています…');
     const pos=await geocodeAddress(address);
     currentEditLocation=pos;
     locLabel();
-    alert(`登録住所から位置情報を取得しました。
+
+    if(id){
+      const fresh=await getOne(id);
+      if(fresh){
+        fresh.location=pos;
+        fresh.address=address;
+        fresh.updatedAt=Date.now();
+        await put(fresh);
+        await refresh();
+      }
+    }
+    alert(`住所から位置情報を登録しました。
 ${address}
 
-このまま「保存」を押してください。`);
+「近く」検索に利用できます。`);
   }catch(err){
-    alert(err?.message||'登録住所から位置情報を取得できませんでした。');
+    currentEditLocation=null;
+    locLabel();
+    alert(err?.message||'住所から位置情報を取得できませんでした。');
   }finally{
     if(typeof photoBusy==='function')photoBusy(false);
   }
@@ -165,4 +193,4 @@ ${address}
  }
  photoBusy(false);renderPhotos();
  if(ng)alert(`${ok}枚を読み込みました。\n${ng}枚はクラウドから取得できませんでした。\n取得できない写真は一度iPhoneの「写真」へ保存してから選択してください。`);
-};$('editorForm').onsubmit=async e=>{e.preventDefault();const id=$('restaurantId').value||crypto.randomUUID();await put({id,name:$('name').value.trim(),address:$('address').value.trim(),phone:$('phone').value.trim(),closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),rank:+$('rank').value,visitFrequency:$('visitFrequency').value,genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),favorite:$('favorite').checked,personalRanking:$('personalRanking').value?+$('personalRanking').value:null,location:(currentEditLocation?.addressSource===$('address').value.trim()?currentEditLocation:null),photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=1122').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
+};$('editorForm').onsubmit=async e=>{e.preventDefault();const id=$('restaurantId').value||crypto.randomUUID();await put({id,name:$('name').value.trim(),address:$('address').value.trim(),phone:$('phone').value.trim(),closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),rank:+$('rank').value,visitFrequency:$('visitFrequency').value,genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),favorite:$('favorite').checked,personalRanking:$('personalRanking').value?+$('personalRanking').value:null,location:(currentEditLocation?.addressSource===$('address').value.trim()?currentEditLocation:null),photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=1123').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
