@@ -128,17 +128,21 @@ if($('pasteTabelogBtn'))$('pasteTabelogBtn').onclick=async()=>{
 
 $('backupBtn').onclick=async()=>{if(!restaurants.length){alert('バックアップする店舗がありません。');return;}await downloadBackup();};
 $('restoreBtn').onclick=()=>$('restoreFile').click();
-$('restoreFile').onchange=async e=>{const f=e.target.files?.[0];if(f)await restoreBackupFile(f);e.target.value='';};$('addBtn').onclick=()=>{reset();$('editorDialog').showModal()};$('cancelBtn').onclick=()=>$('editorDialog').close();$('closeDetailBtn').onclick=()=>$('detailDialog').close();$('search').oninput=render;if($('genreFilter'))$('genreFilter').onchange=render;document.querySelectorAll('.chip').forEach(b=>b.onclick=async()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentFilter=b.dataset.filter;if(currentFilter==='near'&&!currentLocation){try{currentLocation=await getLoc();}catch{$('status').textContent='現在地を取得できませんでした。位置情報の許可を確認してください。';render();return;}}if(currentFilter==='near'){const located=restaurants.filter(r=>r.location).length;$('status').textContent=`現在地から5km以内を表示。位置登録済み ${located} / ${restaurants.length}件`;}else $('status').textContent='';render()});$('useLocationBtn').onclick=async()=>{try{currentEditLocation=await getLoc();locLabel()}catch{alert('位置情報を取得できませんでした。')}};
+$('restoreFile').onchange=async e=>{const f=e.target.files?.[0];if(f)await restoreBackupFile(f);e.target.value='';};$('addBtn').onclick=()=>{reset();$('editorDialog').showModal()};$('cancelBtn').onclick=()=>$('editorDialog').close();$('closeDetailBtn').onclick=()=>$('detailDialog').close();$('search').oninput=render;if($('genreFilter'))$('genreFilter').onchange=render;document.querySelectorAll('.chip').forEach(b=>b.onclick=async()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentFilter=b.dataset.filter;if(currentFilter==='near'&&!currentLocation){try{currentLocation=await getLoc();}catch{$('status').textContent='現在地を取得できませんでした。位置情報の許可を確認してください。';render();return;}}if(currentFilter==='near'){const located=restaurants.filter(r=>r.location).length;$('status').textContent=`現在地から5km以内を表示。位置登録済み ${located} / ${restaurants.length}件`;}else $('status').textContent='';render()});
 if($('geocodeAddressBtn'))$('geocodeAddressBtn').onclick=async()=>{
   const address=$('address')?.value.trim()||'';
-  if(!address){alert('先に住所を入力してください。');return;}
+  if(!address){alert('住所が登録されていません。先に住所を入力してください。');return;}
   try{
-    if(typeof photoBusy==='function')photoBusy(true,'住所から位置情報を取得しています…');
-    currentEditLocation=await geocodeAddress(address);
+    if(typeof photoBusy==='function')photoBusy(true,'登録住所から位置情報を取得しています…');
+    const pos=await geocodeAddress(address);
+    currentEditLocation=pos;
     locLabel();
-    alert('住所から位置情報を取得しました。保存すると「近く」検索に使えます。');
+    alert(`登録住所から位置情報を取得しました。
+${address}
+
+このまま「保存」を押してください。`);
   }catch(err){
-    alert(err?.message||'住所から位置情報を取得できませんでした。');
+    alert(err?.message||'登録住所から位置情報を取得できませんでした。');
   }finally{
     if(typeof photoBusy==='function')photoBusy(false);
   }
@@ -159,4 +163,4 @@ if($('geocodeAddressBtn'))$('geocodeAddressBtn').onclick=async()=>{
  }
  photoBusy(false);renderPhotos();
  if(ng)alert(`${ok}枚を読み込みました。\n${ng}枚はクラウドから取得できませんでした。\n取得できない写真は一度iPhoneの「写真」へ保存してから選択してください。`);
-};$('editorForm').onsubmit=async e=>{e.preventDefault();const id=$('restaurantId').value||crypto.randomUUID();await put({id,name:$('name').value.trim(),address:$('address').value.trim(),phone:$('phone').value.trim(),closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),rank:+$('rank').value,visitFrequency:$('visitFrequency').value,genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),favorite:$('favorite').checked,personalRanking:$('personalRanking').value?+$('personalRanking').value:null,location:currentEditLocation,photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=112').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
+};$('editorForm').onsubmit=async e=>{e.preventDefault();const id=$('restaurantId').value||crypto.randomUUID();await put({id,name:$('name').value.trim(),address:$('address').value.trim(),phone:$('phone').value.trim(),closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),rank:+$('rank').value,visitFrequency:$('visitFrequency').value,genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),favorite:$('favorite').checked,personalRanking:$('personalRanking').value?+$('personalRanking').value:null,location:currentEditLocation,photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=1121').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
