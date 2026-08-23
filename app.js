@@ -87,27 +87,64 @@ async function restoreBackupFile(file){
 }
 
 async function geocodeAddress(address){
-  const raw=(address||'').trim();
+  const raw=(address||'').trim()
+    .replace(/〒?\s*\d{3}-?\d{4}\s*/g,'')
+    .replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+    .replace(/\s+/g,'');
   if(!raw)throw new Error('住所が入力されていません。');
-  const candidates=[raw];
-  const noPost=raw.replace(/〒?\s*\d{3}-?\d{4}\s*/g,'').trim();
-  if(noPost&&!candidates.includes(noPost))candidates.push(noPost);
-  const simple=noPost.replace(/\s+[^\s]+(?:ビル|マンション|ハイツ|コーポ|号室|階).*$/,'').trim();
-  if(simple&&!candidates.includes(simple))candidates.push(simple);
 
-  for(const q of candidates){
-    try{
-      const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=jp&accept-language=ja&q=${encodeURIComponent(q)}`;
-      const resp=await fetch(url,{cache:'no-store',headers:{'Accept':'application/json'}});
-      if(!resp.ok)continue;
-      const data=await resp.json();
-      if(Array.isArray(data)&&data.length){
-        const lat=Number(data[0].lat),lon=Number(data[0].lon);
-        if(Number.isFinite(lat)&&Number.isFinite(lon))return {lat,lon,addressSource:raw,geocodedAt:Date.now()};
+  // Geoloniaの日本住所APIから都道府県→市区町村→町丁目の代表点を取得。
+  const prefResp=await fetch('https://geolonia.github.io/japanese-addresses/api/ja.json',{cache:'force-cache'});
+  if(!prefResp.ok)throw new Error('住所データを取得できませんでした。');
+  const prefs=await prefResp.json();
+
+  const pref=Object.keys(prefs).find(p=>raw.startsWith(p));
+  if(!pref)throw new Error('都道府県を判別できませんでした。住所を都道府県から入力してください。');
+
+  const afterPref=raw.slice(pref.length);
+  const cities=(prefs[pref]||[]).slice().sort((a,b)=>b.length-a.length);
+  const city=cities.find(c=>afterPref.startsWith(c));
+  if(!city)throw new Error('市区町村を判別できませんでした。');
+
+  const rest=afterPref.slice(city.length);
+  const townUrl=`https://geolonia.github.io/japanese-addresses/api/ja/${encodeURIComponent(pref)}/${encodeURIComponent(city)}.json`;
+  const townResp=await fetch(townUrl,{cache:'force-cache'});
+  if(!townResp.ok)throw new Error('町丁目データを取得できませんでした。');
+  const towns=await townResp.json();
+
+  // 住所文字列に最も長く一致する町丁目を優先。
+  let best=null, bestLen=-1;
+  for(const t of towns){
+    const names=[t.koaza,t.town].filter(Boolean);
+    for(const name of names){
+      if(rest.startsWith(name) && name.length>bestLen){
+        best=t;bestLen=name.length;
       }
-    }catch(e){console.warn('geocode failed',q,e)}
+    }
   }
-  throw new Error('住所から位置を取得できませんでした。都道府県・市区町村・番地まで入力して再度お試しください。');
+  // 完全な先頭一致がない場合、町名を含む候補にフォールバック。
+  if(!best){
+    for(const t of towns){
+      const names=[t.koaza,t.town].filter(Boolean);
+      for(const name of names){
+        if(rest.includes(name) && name.length>bestLen){
+          best=t;bestLen=name.length;
+        }
+      }
+    }
+  }
+
+  if(!best || !Number.isFinite(Number(best.lat)) || !Number.isFinite(Number(best.lng))){
+    throw new Error('町丁目までの位置を取得できませんでした。住所表記を確認してください。');
+  }
+
+  return {
+    lat:Number(best.lat),
+    lon:Number(best.lng),
+    addressSource:(address||'').trim(),
+    geocodeProvider:'geolonia',
+    geocodedAt:Date.now()
+  };
 }
 document.addEventListener('DOMContentLoaded',async()=>{for(const id of['lunchOpen','lunchClose','dinnerOpen','dinnerClose'])fill(id,times());$('personalRanking').innerHTML='<option value="">なし</option>'+Array.from({length:50},(_,i)=>`<option value="${i+1}">${i+1}位</option>`).join('');await openDB();if($('status'))$('status').textContent='初回のみ：写真データを軽量化しています…';const mig=await optimizeExistingPhotos();await refresh();if($('status'))$('status').textContent='';if(mig.stores)setTimeout(()=>alert(`${mig.stores}店舗・${mig.pics}枚の写真を軽量化しました。\n店舗データはそのままです。`),300);
 
@@ -193,4 +230,4 @@ ${address}
  }
  photoBusy(false);renderPhotos();
  if(ng)alert(`${ok}枚を読み込みました。\n${ng}枚はクラウドから取得できませんでした。\n取得できない写真は一度iPhoneの「写真」へ保存してから選択してください。`);
-};$('editorForm').onsubmit=async e=>{e.preventDefault();const id=$('restaurantId').value||crypto.randomUUID();await put({id,name:$('name').value.trim(),address:$('address').value.trim(),phone:$('phone').value.trim(),closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),rank:+$('rank').value,visitFrequency:$('visitFrequency').value,genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),favorite:$('favorite').checked,personalRanking:$('personalRanking').value?+$('personalRanking').value:null,location:(currentEditLocation?.addressSource===$('address').value.trim()?currentEditLocation:null),photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=1123').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
+};$('editorForm').onsubmit=async e=>{e.preventDefault();const id=$('restaurantId').value||crypto.randomUUID();await put({id,name:$('name').value.trim(),address:$('address').value.trim(),phone:$('phone').value.trim(),closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),rank:+$('rank').value,visitFrequency:$('visitFrequency').value,genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),favorite:$('favorite').checked,personalRanking:$('personalRanking').value?+$('personalRanking').value:null,location:(currentEditLocation?.addressSource===$('address').value.trim()?currentEditLocation:null),photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=1124').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
