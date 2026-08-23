@@ -87,6 +87,27 @@ async function restoreBackupFile(file){
 }
 
 document.addEventListener('DOMContentLoaded',async()=>{for(const id of['lunchOpen','lunchClose','dinnerOpen','dinnerClose'])fill(id,times());$('personalRanking').innerHTML='<option value="">なし</option>'+Array.from({length:50},(_,i)=>`<option value="${i+1}">${i+1}位</option>`).join('');await openDB();if($('status'))$('status').textContent='初回のみ：写真データを軽量化しています…';const mig=await optimizeExistingPhotos();await refresh();if($('status'))$('status').textContent='';if(mig.stores)setTimeout(()=>alert(`${mig.stores}店舗・${mig.pics}枚の写真を軽量化しました。\n店舗データはそのままです。`),300);
+
+if($('searchTabelogBtn'))$('searchTabelogBtn').onclick=()=>{
+  const name=$('name')?.value.trim()||'';
+  const address=$('address')?.value.trim()||'';
+  if(!name){alert('先に店舗名を入力してください。');return;}
+  const q=`site:tabelog.com ${name} ${address}`.trim();
+  const url=`https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  window.location.assign(url);
+};
+if($('pasteTabelogBtn'))$('pasteTabelogBtn').onclick=async()=>{
+  try{
+    const text=(await navigator.clipboard.readText()).trim();
+    if(!text){alert('クリップボードにURLがありません。');return;}
+    if(!/^https?:\/\//i.test(text)){alert('URLをコピーしてから貼り付けてください。');return;}
+    if($('tabelogUrl'))$('tabelogUrl').value=text;
+  }catch{
+    const text=prompt('食べログURLを貼り付けてください。',$('tabelogUrl')?.value||'');
+    if(text!==null&&$('tabelogUrl'))$('tabelogUrl').value=text.trim();
+  }
+};
+
 $('backupBtn').onclick=async()=>{if(!restaurants.length){alert('バックアップする店舗がありません。');return;}await downloadBackup();};
 $('restoreBtn').onclick=()=>$('restoreFile').click();
 $('restoreFile').onchange=async e=>{const f=e.target.files?.[0];if(f)await restoreBackupFile(f);e.target.value='';};$('addBtn').onclick=()=>{reset();$('editorDialog').showModal()};$('cancelBtn').onclick=()=>$('editorDialog').close();$('closeDetailBtn').onclick=()=>$('detailDialog').close();$('search').oninput=render;if($('genreFilter'))$('genreFilter').onchange=render;document.querySelectorAll('.chip').forEach(b=>b.onclick=async()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentFilter=b.dataset.filter;if(currentFilter==='near'&&!currentLocation){try{currentLocation=await getLoc();$('status').textContent='現在地から5km以内を表示しています。'}catch{$('status').textContent='位置情報を取得できませんでした。'}}else $('status').textContent='';render()});$('useLocationBtn').onclick=async()=>{try{currentEditLocation=await getLoc();locLabel()}catch{alert('位置情報を取得できませんでした。')}};$('clearLocationBtn').onclick=()=>{currentEditLocation=null;locLabel()};$('photos').onchange=async e=>{
@@ -106,4 +127,4 @@ $('restoreFile').onchange=async e=>{const f=e.target.files?.[0];if(f)await resto
  }
  photoBusy(false);renderPhotos();
  if(ng)alert(`${ok}枚を読み込みました。\n${ng}枚はクラウドから取得できませんでした。\n取得できない写真は一度iPhoneの「写真」へ保存してから選択してください。`);
-};$('editorForm').onsubmit=async e=>{e.preventDefault();const id=$('restaurantId').value||crypto.randomUUID();await put({id,name:$('name').value.trim(),address:$('address').value.trim(),phone:$('phone').value.trim(),closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),rank:+$('rank').value,visitFrequency:$('visitFrequency').value,genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),favorite:$('favorite').checked,personalRanking:$('personalRanking').value?+$('personalRanking').value:null,location:currentEditLocation,photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=111').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
+};$('editorForm').onsubmit=async e=>{e.preventDefault();const id=$('restaurantId').value||crypto.randomUUID();await put({id,name:$('name').value.trim(),address:$('address').value.trim(),phone:$('phone').value.trim(),closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),rank:+$('rank').value,visitFrequency:$('visitFrequency').value,genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),favorite:$('favorite').checked,personalRanking:$('personalRanking').value?+$('personalRanking').value:null,location:currentEditLocation,photos:editingPhotos,thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,photoOptimizedV17:true,hours:{lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}},updatedAt:Date.now()});$('editorDialog').close();await refresh()};$('deleteRestaurantBtn').onclick=async()=>{const id=$('restaurantId').value;if(id&&confirm('この店舗を削除しますか？写真も削除されます。')){await del(id);$('editorDialog').close();await refresh()}};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=1111').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
