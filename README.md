@@ -118,3 +118,8 @@ XcodeなしでGitHub Pagesに公開し、iPhoneのSafariからホーム画面へ
 - 店舗名＋住所＋site:tabelog.com でGoogle検索
 - PWAでブロックされやすい別ウインドウ表示をやめ、現在画面で検索結果へ遷移
 - URL貼り付けボタンもイベント処理を追加
+
+## v1.11.2 Safari検索
+- 食べログ候補検索をStandalone PWA内ではなくSafariで開く方式へ変更
+- 店舗名＋住所＋site:tabelog.com で検索
+- URLの完全自動取得は静的GitHub Pagesでは行わず、検索後のURL貼り付け方式を継続
