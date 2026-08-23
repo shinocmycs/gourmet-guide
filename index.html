@@ -53,6 +53,18 @@
   <label>店舗名<input id="name" required></label>
   <label>住所<input id="address"></label>
   <div class="two"><label>電話<input id="phone" inputmode="tel"></label><label>定休日<input id="closedDays" placeholder="例：火曜"></label></div>
+    <div class="tabelogBox">
+      <label>食べログURL
+        <input id="tabelogUrl" type="url" inputmode="url" autocomplete="url"
+               placeholder="https://tabelog.com/...">
+      </label>
+      <div class="tabelogTools">
+        <button type="button" id="searchTabelogBtn" class="secondary">店舗名から食べログを検索</button>
+        <button type="button" id="pasteTabelogBtn" class="secondary">URLを貼り付け</button>
+      </div>
+      <div class="muted">店舗名と住所を使って食べログ候補を検索します。</div>
+    </div>
+
   <div class="two"><label>ランク<select id="rank"><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></label>
   <label>訪問回数<select id="visitFrequency"><option>未訪問</option><option>1回</option><option>2回</option><option>3回</option><option>4回</option><option>5回</option><option>常連</option></select></label></div>
   <div class="two"><label>ジャンル<select id="genre"><option value="">未選択</option><option>ラーメン</option><option>うどん・そば</option><option>寿司</option><option>焼肉</option><option>中華</option><option>洋食</option><option>和食</option><option>居酒屋</option><option>カフェ</option><option>スイーツ</option><option>カレー</option><option>その他</option></select></label>
