@@ -36,3 +36,5 @@
 .tabelogBox label{margin-top:0}
 .tabelogTools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 @media(max-width:480px){.tabelogTools{grid-template-columns:1fr}}
+
+.locationBtns{flex-wrap:wrap}.locationBtns .secondary{flex:1;min-width:120px}

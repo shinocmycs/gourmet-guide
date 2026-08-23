@@ -123,3 +123,9 @@ XcodeなしでGitHub Pagesに公開し、iPhoneのSafariからホーム画面へ
 - 食べログ候補検索をStandalone PWA内ではなくSafariで開く方式へ変更
 - 店舗名＋住所＋site:tabelog.com で検索
 - URLの完全自動取得は静的GitHub Pagesでは行わず、検索後のURL貼り付け方式を継続
+
+
+## v1.12 近く検索修正
+- 住所から位置情報取得を追加
+- 「近く」選択時に位置登録済み件数を表示
+- 取得した緯度経度を店舗データに保存して5km検索に利用
