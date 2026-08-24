@@ -46,39 +46,78 @@
     </div>
     <div id="bulkGeoStatus" class="status"></div>
   </section>
-  <main><section id="status" class="status"></section><section id="list" class="list"></section>
-  <section id="empty" class="empty hidden"><div class="emptyIcon">🍴</div><h2>まだお店がありません</h2><p>右上の＋から最初のお店を登録してください。</p></section></main>
+  <main>
+    <section id="status" class="status"></section>
+    <section id="list" class="list"></section>
+    <section id="empty" class="empty hidden"><div class="emptyIcon">🍴</div><h2>まだお店がありません</h2><p>右上の＋から最初のお店を登録してください。</p></section>
+  </main>
 </div>
-<dialog id="editorDialog"><form id="editorForm" method="dialog">
-  <div class="dialogHeader"><button type="button" id="cancelBtn" class="textBtn">キャンセル</button><strong id="dialogTitle">店舗登録</strong><button type="submit" class="textBtn strong">保存</button></div>
-  <input type="hidden" id="restaurantId">
-  <label>店舗名<input id="name" required></label>
-  <label>住所<input id="address"></label>
-  <div class="two"><label>電話<input id="phone" inputmode="tel"></label><label>定休日<input id="closedDays" placeholder="例：火曜"></label></div>
-    <div class="tabelogBox">
-      <label>食べログURL
-        <input id="tabelogUrl" type="url" inputmode="url" autocomplete="url"
-               placeholder="https://tabelog.com/...">
-      </label>
-      <div class="tabelogTools">
-        <button type="button" id="searchTabelogBtn" class="secondary">店舗名から食べログを検索</button>
-        <button type="button" id="pasteTabelogBtn" class="secondary">URLを貼り付け</button>
-      </div>
-      <div class="muted">店舗名と住所を使って食べログ候補を検索します。</div>
-    </div>
 
-  <div class="two"><label>ランク<select id="rank"><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></label>
-  <label>訪問回数<select id="visitFrequency"><option>未訪問</option><option>1回</option><option>2回</option><option>3回</option><option>4回</option><option>5回</option><option>常連</option></select></label></div>
-  <div class="two"><label>ジャンル<select id="genre"><option value="">未選択</option><option>ラーメン</option><option>うどん・そば</option><option>寿司</option><option>焼肉</option><option>中華</option><option>洋食</option><option>和食</option><option>居酒屋</option><option>カフェ</option><option>スイーツ</option><option>カレー</option><option>その他</option></select></label>
-  <label>価格<select id="price"><option value="">未選択</option><option>〜1,000円</option><option>1,000〜2,000円</option><option>2,000〜3,000円</option><option>3,000〜5,000円</option><option>5,000〜10,000円</option><option>10,000円〜</option></select></label></div>
-  <fieldset><legend>営業時間</legend><div class="hoursRow"><label class="inlineCheck"><input type="checkbox" id="lunchEnabled" checked> 昼の部</label><select id="lunchOpen"></select><span>〜</span><select id="lunchClose"></select></div><div class="hoursRow"><label class="inlineCheck"><input type="checkbox" id="dinnerEnabled" checked> 夜の部</label><select id="dinnerOpen"></select><span>〜</span><select id="dinnerClose"></select></div></fieldset>
-  <div class="two"><label class="inlineCheck block"><input type="checkbox" id="favorite"> お気に入り</label><label>自分ランキング<select id="personalRanking"><option value="">なし</option></select></label></div>
+<dialog id="editorDialog"><form id="editorForm" method="dialog">
+  <div class="dialogHeader">
+    <button type="button" id="cancelBtn" class="textBtn">キャンセル</button>
+    <strong id="dialogTitle">店舗登録</strong>
+    <button type="submit" class="textBtn strong">保存</button>
+  </div>
+  <input type="hidden" id="restaurantId">
+
+  <label>店舗名<input id="name" required></label>
+  <label>住所<input id="address" autocomplete="street-address"></label>
+
+  <fieldset>
+    <legend>位置情報</legend>
+    <div class="rowBtns">
+      <button type="button" id="geocodeAddressBtn" class="secondary">住所から位置を取得</button>
+      <button type="button" id="useLocationBtn" class="secondary">現在地を登録（手動）</button>
+      <button type="button" id="clearLocationBtn" class="secondary">位置を削除</button>
+    </div>
+    <div id="locationLabel" class="muted">住所位置情報：未登録</div>
+    <div class="muted">通常は「住所から位置を取得」を使用してください。保存時も未登録なら住所から自動取得します。</div>
+  </fieldset>
+
+  <div class="two"><label>電話<input id="phone" inputmode="tel"></label><label>定休日<input id="closedDays" placeholder="例：火曜"></label></div>
+
+  <div class="tabelogBox">
+    <label>食べログURL
+      <input id="tabelogUrl" type="url" inputmode="url" autocomplete="url" placeholder="https://tabelog.com/...">
+    </label>
+    <div class="tabelogTools">
+      <button type="button" id="searchTabelogBtn" class="secondary">店舗名から食べログを検索</button>
+      <button type="button" id="pasteTabelogBtn" class="secondary">URLを貼り付け</button>
+    </div>
+    <div class="muted">店舗名と住所を使って食べログ候補を検索します。</div>
+  </div>
+
+  <div class="two">
+    <label>ランク<select id="rank"><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></label>
+    <label>訪問回数<select id="visitFrequency"><option>未訪問</option><option>1回</option><option>2回</option><option>3回</option><option>4回</option><option>5回</option><option>常連</option></select></label>
+  </div>
+
+  <div class="two">
+    <label>ジャンル<select id="genre"><option value="">未選択</option><option>ラーメン</option><option>うどん・そば</option><option>寿司</option><option>焼肉</option><option>中華</option><option>洋食</option><option>和食</option><option>居酒屋</option><option>カフェ</option><option>スイーツ</option><option>カレー</option><option>その他</option></select></label>
+    <label>価格<select id="price"><option value="">未選択</option><option>〜1,000円</option><option>1,000〜2,000円</option><option>2,000〜3,000円</option><option>3,000〜5,000円</option><option>5,000〜10,000円</option><option>10,000円〜</option></select></label>
+  </div>
+
+  <fieldset><legend>営業時間</legend>
+    <div class="hoursRow"><label class="inlineCheck"><input type="checkbox" id="lunchEnabled" checked> 昼の部</label><select id="lunchOpen"></select><span>〜</span><select id="lunchClose"></select></div>
+    <div class="hoursRow"><label class="inlineCheck"><input type="checkbox" id="dinnerEnabled" checked> 夜の部</label><select id="dinnerOpen"></select><span>〜</span><select id="dinnerClose"></select></div>
+  </fieldset>
+
+  <div class="two">
+    <label class="inlineCheck block"><input type="checkbox" id="favorite"> お気に入り</label>
+    <label>自分ランキング<select id="personalRanking"><option value="">なし</option></select></label>
+  </div>
+
   <label>備考・感想<textarea id="note" rows="5" placeholder="味の感想、おすすめ料理、駐車場など"></textarea></label>
-  <fieldset><legend>位置情報</legend><div class="rowBtns"><button type="button" id="useLocationBtn" class="secondary">現在地を登録</button><button type="button" id="clearLocationBtn" class="secondary">位置を削除</button></div><div id="locationLabel" class="muted">位置情報なし</div></fieldset>
+
   <fieldset><legend>写真（複数可）</legend><input id="photos" type="file" accept="image/*" multiple><div id="photoPreview" class="photoGrid"></div></fieldset>
   <div class="dangerZone"><button type="button" id="deleteRestaurantBtn" class="danger hidden">この店舗を削除</button></div>
 </form></dialog>
+
 <dialog id="detailDialog"><div id="detail"></div><button id="closeDetailBtn" class="fullBtn">閉じる</button></dialog>
+
 <script src="https://cdn.geolonia.com/community-geocoder.js"></script>
 <script src="supabase-config.js"></script>
-  <script src="app.js"></script></body></html>
+<script src="app.js"></script>
+</body>
+</html>
