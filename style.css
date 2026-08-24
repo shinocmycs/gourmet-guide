@@ -42,3 +42,21 @@
 #bulkGeoStatus{padding:8px 2px;white-space:pre-line}
 #bulkGeocodeBtn:disabled{opacity:.55}
 .dataTools{flex-wrap:wrap}
+
+.topActions{display:flex;align-items:center;gap:10px}
+.cloudBtn{border:0;border-radius:999px;padding:10px 14px;font-weight:700;background:#111;color:#fff;white-space:nowrap}
+.cloudBtn.connected{background:#16834b}
+.cloudDialog{width:min(680px,96vw);max-height:92dvh;border:0;border-radius:24px;padding:0;overflow:auto}
+.cloudDialog::backdrop{background:rgba(0,0,0,.45)}
+.cloudDialog>section{padding:18px 22px 24px}
+.cloudHeader{position:sticky;top:0;background:#fff;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid #eee}
+.cloudLead{line-height:1.7}
+.cloudTwoBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.primaryCloud{border:0;border-radius:14px;padding:14px;background:#111;color:#fff;font-weight:800;font-size:16px}
+.fullCloud{width:100%;margin:8px 0}
+.cloudAccountRow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0 18px}
+.groupCard,.joinBox{background:#f5f5f7;border-radius:16px;padding:16px;margin:12px 0}
+.shareCodeRow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:12px 0;font-size:18px}
+.miniBtn{padding:8px 12px}
+.cloudProgress{white-space:pre-line;line-height:1.6;padding:8px 0;font-weight:600}
+@media(max-width:520px){.cloudTwoBtns{grid-template-columns:1fr}.cloudBtn{padding:9px 11px;font-size:14px}}
