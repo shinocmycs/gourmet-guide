@@ -47,7 +47,7 @@ async function optimizeExistingPhotos(){const keys=await allKeys();let stores=0,
 async function refresh(){restaurants=await loadAllLight();render()}function render(){const q=$('search').value.trim().toLowerCase(),genreFilter=$('genreFilter')?.value||'';let list=restaurants.filter(r=>[r.name,r.address,r.genre,r.note].join(' ').toLowerCase().includes(q));if(genreFilter)list=list.filter(r=>r.genre===genreFilter);
   if(currentFilter==='unvisited')list=list.filter(r=>(r.visitFrequency||'未訪問')==='未訪問');if(currentFilter==='favorite')list=list.filter(r=>r.favorite);if(currentFilter==='ranked')list=list.filter(r=>r.personalRanking).sort((a,b)=>a.personalRanking-b.personalRanking);
   // default star sort
-  if(currentFilter!=='ranked'&&currentFilter!=='near')list.sort((a,b)=>(Number(b.rank)||0)-(Number(a.rank)||0)||(Number(b.updatedAt)||0)-(Number(a.updatedAt)||0));if(currentFilter==='near')list=list.filter(r=>coordsOf(r)&&currentLocation&&hav(currentLocation,coordsOf(r))<=5).sort((a,b)=>hav(currentLocation,coordsOf(a))-hav(currentLocation,coordsOf(b)));if($('countLabel'))$('countLabel').textContent=(q||genreFilter||currentFilter!=='all')?`表示：${list.length}件 / 全${restaurants.length}件`:`登録店舗：${restaurants.length}件`;$('list').innerHTML=list.map(r=>`<article class="card" data-id="${r.id}">${r.thumbnail?`<img class="thumb" src="${r.thumbnail}">`:'<div class="thumb placeholder">🍴</div>'}<div><h3>${esc(r.name)}</h3><div class="stars">${stars(r.rank)}</div><div class="meta">${esc(r.genre||'ジャンル未設定')}${r.price?' ・ '+esc(r.price):''}${dist(r)?' ・ '+dist(r):''}</div><div class="meta">${esc(r.address||'住所未設定')}</div><div class="badges">${r.favorite?'<span class="badge">♥ お気に入り</span>':''}<span class="badge">${esc(r.visitFrequency||'未訪問')}</span>${r.personalRanking?`<span class="badge">🏆 ${r.personalRanking}位</span>`:''}</div></div></article>`).join('');$('empty').classList.toggle('hidden',restaurants.length!==0);document.querySelectorAll('.card').forEach(c=>c.onclick=()=>showDetail(c.dataset.id))}
+  if(currentFilter!=='ranked'&&currentFilter!=='near')list.sort((a,b)=>(Number(b.rank)||0)-(Number(a.rank)||0)||(Number(b.updatedAt)||0)-(Number(a.updatedAt)||0));if(currentFilter==='near')list=list.filter(r=>coordsOf(r)&&currentLocation&&hav(currentLocation,coordsOf(r))<=5).sort((a,b)=>hav(currentLocation,coordsOf(a))-hav(currentLocation,coordsOf(b)));if($('countLabel'))$('countLabel').textContent=(q||genreFilter||currentFilter!=='all')?`表示：${list.length}件 / 全${restaurants.length}件`:`登録店舗：${restaurants.length}件`;$('list').innerHTML=list.map(r=>`<article class="card" data-id="${r.id}">${r.thumbnail?`<img class="thumb" src="${r.thumbnail}" loading="lazy" decoding="async">`:'<div class="thumb placeholder">🍴</div>'}<div><h3>${esc(r.name)}</h3><div class="stars">${stars(r.rank)}</div><div class="meta">${esc(r.genre||'ジャンル未設定')}${r.price?' ・ '+esc(r.price):''}${dist(r)?' ・ '+dist(r):''}</div><div class="meta">${esc(r.address||'住所未設定')}</div><div class="badges">${r.favorite?'<span class="badge">♥ お気に入り</span>':''}<span class="badge">${esc(r.visitFrequency||'未訪問')}</span>${r.personalRanking?`<span class="badge">🏆 ${r.personalRanking}位</span>`:''}</div></div></article>`).join('');$('empty').classList.toggle('hidden',restaurants.length!==0);document.querySelectorAll('.card').forEach(c=>c.onclick=()=>showDetail(c.dataset.id))}
 function times(){const a=[];for(let h=5;h<=29;h++)for(const m of[0,30])a.push(`${String(h%24).padStart(2,'0')}:${String(m).padStart(2,'0')}`);return a}function fill(id,vals){$(id).innerHTML=vals.map(v=>`<option>${v}</option>`).join('')}function locLabel(){$('locationLabel').textContent=currentEditLocation?`住所から登録：緯度 ${currentEditLocation.lat.toFixed(5)} / 経度 ${currentEditLocation.lon.toFixed(5)}`:'住所位置情報：未登録'}function renderPhotos(){$('photoPreview').innerHTML=editingPhotos.map((p,i)=>`<div class="photoWrap"><img src="${p}"><button type="button" class="photoDelete" data-i="${i}">×</button></div>`).join('');document.querySelectorAll('.photoDelete').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;editingPhotos.splice(i,1);editingCloudPaths.splice(i,1);renderPhotos()})}
 function reset(r=null){for(const k of['name','address','phone','closedDays','note','tabelogUrl']){const el=$(k);if(el)el.value=r?.[k]||'';}$('restaurantId').value=r?.id||'';$('rank').value=r?.rank||3;$('visitFrequency').value=r?.visitFrequency||'未訪問';$('genre').value=r?.genre||'';$('price').value=r?.price||'';$('favorite').checked=!!r?.favorite;$('personalRanking').value=r?.personalRanking||'';$('lunchEnabled').checked=r?.hours?.lunch?.enabled??true;$('lunchOpen').value=r?.hours?.lunch?.open||'11:00';$('lunchClose').value=r?.hours?.lunch?.close||'14:30';$('dinnerEnabled').checked=r?.hours?.dinner?.enabled??true;$('dinnerOpen').value=r?.hours?.dinner?.open||'17:00';$('dinnerClose').value=r?.hours?.dinner?.close||'21:00';currentEditLocation=(Number.isFinite(Number(r?.geoLat))&&Number.isFinite(Number(r?.geoLon)))
   ? {lat:Number(r.geoLat),lon:Number(r.geoLon),addressSource:r?.geoAddress||(r?.address||'').trim()}
@@ -416,10 +416,19 @@ async function cloudPullAll(silent=false){
   }
   let n=0;
   for(const row of rows||[]){
+    const previous=await getOne(row.id);
     const r=localRow(row),plist=by[row.id]||[];
     r.cloudPhotoPaths=plist.map(x=>x.storage_path);
     r.photos=plist.map(x=>urlMap[x.storage_path]).filter(Boolean);
-    r.thumbnail=r.photos[0]||null;
+
+    // Prefer an existing local thumbnail (data/blob URL) when available.
+    // Otherwise use the cloud image URL. This preserves fast local rendering
+    // on devices that already have a lightweight thumbnail.
+    const prevThumb=previous?.thumbnail;
+    const localThumb=(typeof prevThumb==='string' &&
+      (/^data:/i.test(prevThumb)||/^blob:/i.test(prevThumb))) ? prevThumb : null;
+    r.thumbnail=localThumb || r.photos[0] || null;
+
     await put(r);n++;
   }
   await refresh();
@@ -713,4 +722,4 @@ $('deleteRestaurantBtn').onclick=async()=>{
     if(cloudGroup){try{await cloudDeleteRestaurant(id)}catch(e){console.error(e);return alert('クラウドから削除できませんでした。通信状態を確認してください。')}}
     await del(id);$('editorDialog').close();await refresh();
   }
-};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2111').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
+};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2120').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
