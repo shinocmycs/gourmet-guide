@@ -1,4 +1,4 @@
-const APP_CACHE='gourmet-v2120-photospeed';
+const APP_CACHE='gourmet-v2130-fixedinput';
 const PHOTO_CACHE='gourmet-photo-cache-v1';
 
 const ASSETS=[

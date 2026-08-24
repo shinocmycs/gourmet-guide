@@ -60,3 +60,135 @@
 .miniBtn{padding:8px 12px}
 .cloudProgress{white-space:pre-line;line-height:1.6;padding:8px 0;font-weight:600}
 @media(max-width:520px){.cloudTwoBtns{grid-template-columns:1fr}.cloudBtn{padding:9px 11px;font-size:14px}}
+
+
+/* ===== v2.1.3 iPhone fixed input UI =====
+   Prevent Safari from auto-zooming on form focus and eliminate horizontal page scroll.
+*/
+html{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+body{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden;
+  overscroll-behavior-x:none;
+}
+#app,main,.topbar,.toolbar,.list,.card,
+dialog,#editorForm,.detailBody,.cloudDialog,.cloudDialog>section{
+  max-width:100%;
+  min-width:0;
+}
+img,video,canvas{
+  max-width:100%;
+}
+
+/* iOS Safari zooms inputs whose computed font size is below 16px. */
+input,
+select,
+textarea,
+button{
+  font-size:16px;
+}
+input,
+select,
+textarea{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+}
+label input,
+label select,
+label textarea{
+  font-size:16px;
+}
+
+/* Keep dialogs inside the visual viewport and make vertical scrolling self-contained. */
+dialog,
+.cloudDialog{
+  width:calc(100vw - 18px);
+  max-width:680px;
+  max-height:92dvh;
+  margin:auto;
+  overflow-x:hidden;
+  overflow-y:auto;
+}
+#editorForm{
+  width:100%;
+  overflow-x:hidden;
+}
+.dialogHeader,
+.cloudHeader{
+  width:100%;
+  min-width:0;
+}
+
+/* Prevent grid/flex children from forcing the page wider than the iPhone. */
+.two>*,
+.hoursRow>*,
+.summaryRow>*,
+.dataTools>*,
+.rowBtns>*,
+.tabelogTools>*,
+.detailActions>*,
+.cloudTwoBtns>*,
+.cloudAccountRow>*,
+.shareCodeRow>*{
+  min-width:0;
+  max-width:100%;
+}
+.card{
+  overflow:hidden;
+}
+.card>div{
+  min-width:0;
+}
+.card h3,
+.meta,
+.noteBox,
+.muted{
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+/* Horizontal chip scrolling remains intentional, but cannot drag the whole page sideways. */
+.chips,
+.galleryTrack,
+.fullTrack{
+  max-width:100%;
+  overscroll-behavior-x:contain;
+}
+
+/* More compact time controls on narrow iPhones. */
+@media(max-width:420px){
+  .hoursRow{
+    grid-template-columns:minmax(82px,1fr) minmax(74px,86px) auto minmax(74px,86px);
+    gap:5px;
+  }
+  .hoursRow input,
+  .hoursRow select{
+    padding-left:7px;
+    padding-right:7px;
+  }
+  .dialogHeader{
+    padding-left:2px;
+    padding-right:2px;
+  }
+  #editorForm{
+    padding-left:12px;
+    padding-right:12px;
+  }
+}
+
+/* Avoid double-tap zoom behavior on controls without disabling normal page accessibility. */
+button,
+input,
+select,
+textarea,
+a{
+  touch-action:manipulation;
+}

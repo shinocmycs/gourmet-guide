@@ -722,4 +722,4 @@ $('deleteRestaurantBtn').onclick=async()=>{
     if(cloudGroup){try{await cloudDeleteRestaurant(id)}catch(e){console.error(e);return alert('クラウドから削除できませんでした。通信状態を確認してください。')}}
     await del(id);$('editorDialog').close();await refresh();
   }
-};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2120').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
+};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2130').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
