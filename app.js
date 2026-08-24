@@ -13,7 +13,34 @@ function coordsOf(r){
   if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
   return {lat,lon};
 }function dist(r){const d=hav(currentLocation,coordsOf(r));return d==null?'':d<1?`${Math.round(d*1000)}m`:`${d.toFixed(1)}km`}
-function compressDataURL(src,maxDim=1280,quality=.72){return new Promise(resolve=>{const img=new Image();img.onload=()=>{const scale=Math.min(1,maxDim/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height)),w=Math.max(1,Math.round((img.naturalWidth||img.width)*scale)),h=Math.max(1,Math.round((img.naturalHeight||img.height)*scale)),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{alpha:false});x.drawImage(img,0,0,w,h);resolve(c.toDataURL('image/jpeg',quality))};img.onerror=()=>resolve(src);img.src=src})}
+function compressDataURL(src,maxDim=1280,quality=.72){
+  return new Promise(resolve=>{
+    if(!src){resolve(src);return;}
+    // Cloud photos are already optimized. Re-drawing a signed URL to canvas can
+    // taint the canvas on iOS Safari and leave the save promise hanging.
+    if(typeof src==='string'&&/^https?:\/\//i.test(src)){resolve(src);return;}
+    const img=new Image();
+    let done=false;
+    const finish=v=>{if(done)return;done=true;resolve(v)};
+    img.onload=()=>{
+      try{
+        const nw=img.naturalWidth||img.width,nh=img.naturalHeight||img.height;
+        const scale=Math.min(1,maxDim/Math.max(nw,nh));
+        const w=Math.max(1,Math.round(nw*scale)),h=Math.max(1,Math.round(nh*scale));
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        const x=c.getContext('2d',{alpha:false});
+        x.drawImage(img,0,0,w,h);
+        finish(c.toDataURL('image/jpeg',quality));
+      }catch(err){
+        console.warn('image compression skipped',err);
+        finish(src);
+      }
+    };
+    img.onerror=()=>finish(src);
+    setTimeout(()=>finish(src),12000);
+    img.src=src;
+  });
+}
 async function makeThumb(src){return await compressDataURL(src,320,.62)}
 async function optimizeExistingPhotos(){const keys=await allKeys();let stores=0,pics=0;for(const id of keys){const r=await getOne(id);if(!r||r.photoOptimizedV17)continue;if(Array.isArray(r.photos)&&r.photos.length){const arr=[];for(const p of r.photos){arr.push(await compressDataURL(p,1280,.72));pics++;await new Promise(q=>setTimeout(q,0))}r.photos=arr;r.thumbnail=await makeThumb(arr[0]);stores++}else if(Array.isArray(r.photos)&&r.photos[0]&&!r.thumbnail){r.thumbnail=await makeThumb(r.photos[0])}r.photoOptimizedV17=true;await put(r)}return{stores,pics}}
 
@@ -600,59 +627,85 @@ ${address}${normalized}
 };
 $('editorForm').onsubmit=async e=>{
   e.preventDefault();
-  const id=$('restaurantId').value||crypto.randomUUID();
-  const address=$('address').value.trim();
+  const saveBtn=$('saveBtn');
+  if(saveBtn?.disabled)return;
+  if(saveBtn)saveBtn.disabled=true;
 
-  if(address&&!locationMatchesAddress(currentEditLocation,address)){
-    try{
-      photoBusy(true,'保存住所から位置を取得しています…');
-      currentEditLocation=await geocodeAddress(address);
-      locLabel();
-    }catch(err){
-      photoBusy(false);
-      const msg=err?.message||'住所から位置情報を取得できませんでした。';
-      if(!confirm(`${msg}\n\n位置情報なしで店舗を保存しますか？\n「近く」検索には表示されません。`))return;
-      currentEditLocation=null;
-      locLabel();
-    }finally{photoBusy(false)}
+  try{
+    const id=$('restaurantId').value||crypto.randomUUID();
+    const previous=await getOne(id);
+    const address=$('address').value.trim();
+
+    if(address&&!locationMatchesAddress(currentEditLocation,address)){
+      try{
+        photoBusy(true,'保存住所から位置を取得しています…');
+        currentEditLocation=await geocodeAddress(address);
+        locLabel();
+      }catch(err){
+        photoBusy(false);
+        const msg=err?.message||'住所から位置情報を取得できませんでした。';
+        if(!confirm(`${msg}\n\n位置情報なしで店舗を保存しますか？\n「近く」検索には表示されません。`))return;
+        currentEditLocation=null;
+        locLabel();
+      }finally{photoBusy(false)}
+    }
+
+    const firstPhoto=editingPhotos[0]||null;
+    let thumbnail=null;
+    if(firstPhoto){
+      // Existing cloud photo: keep/use its URL instead of drawing it to canvas.
+      // New local photo (data URL): make a lightweight thumbnail.
+      if(typeof firstPhoto==='string'&&/^https?:\/\//i.test(firstPhoto)){
+        thumbnail=firstPhoto;
+      }else{
+        thumbnail=await makeThumb(firstPhoto);
+      }
+    }
+
+    const obj={
+      id,name:$('name').value.trim(),address,phone:$('phone').value.trim(),
+      closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),
+      rank:+$('rank').value,visitFrequency:$('visitFrequency').value,
+      genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),
+      favorite:$('favorite').checked,
+      personalRanking:$('personalRanking').value?+$('personalRanking').value:null,
+      location:locationMatchesAddress(currentEditLocation,address)?currentEditLocation:null,
+      geoLat:locationMatchesAddress(currentEditLocation,address)?Number(currentEditLocation.lat):null,
+      geoLon:locationMatchesAddress(currentEditLocation,address)?Number(currentEditLocation.lon):null,
+      geoAddress:locationMatchesAddress(currentEditLocation,address)?address:'',
+      photos:[...editingPhotos],cloudPhotoPaths:[...editingCloudPaths],
+      thumbnail,
+      photoOptimizedV17:true,
+      hours:{
+        lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},
+        dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}
+      },
+      updatedAt:Date.now()
+    };
+
+    // Save to this iPhone first. Even if cloud sync fails, the edit survives locally.
+    photoBusy(true,'このiPhoneに保存しています…');
+    await put(obj);
+
+    if(cloudGroup){
+      try{
+        photoBusy(true,'クラウドへ保存しています…');
+        await cloudSaveRestaurant(obj);
+      }catch(err){
+        console.error('cloud save error',err);
+        alert(`このiPhoneには保存できました。\nクラウド保存だけ失敗しました。\n\n${err?.message||'通信状態を確認してください。'}`);
+      }
+    }
+
+    $('editorDialog').close();
+    await refresh();
+  }catch(err){
+    console.error('restaurant save error',err);
+    alert(`保存処理でエラーが発生しました。\n${err?.message||'もう一度お試しください。'}`);
+  }finally{
+    photoBusy(false);
+    if(saveBtn)saveBtn.disabled=false;
   }
-
-  const obj={
-    id,name:$('name').value.trim(),address,phone:$('phone').value.trim(),
-    closedDays:$('closedDays').value.trim(),tabelogUrl:$('tabelogUrl').value.trim(),
-    rank:+$('rank').value,visitFrequency:$('visitFrequency').value,
-    genre:$('genre').value,price:$('price').value,note:$('note').value.trim(),
-    favorite:$('favorite').checked,
-    personalRanking:$('personalRanking').value?+$('personalRanking').value:null,
-    location:locationMatchesAddress(currentEditLocation,address)?currentEditLocation:null,
-    geoLat:locationMatchesAddress(currentEditLocation,address)?Number(currentEditLocation.lat):null,
-    geoLon:locationMatchesAddress(currentEditLocation,address)?Number(currentEditLocation.lon):null,
-    geoAddress:locationMatchesAddress(currentEditLocation,address)?address:'',
-    photos:[...editingPhotos],cloudPhotoPaths:[...editingCloudPaths],
-    thumbnail:editingPhotos[0]?await makeThumb(editingPhotos[0]):null,
-    photoOptimizedV17:true,
-    hours:{
-      lunch:{enabled:$('lunchEnabled').checked,open:$('lunchOpen').value,close:$('lunchClose').value},
-      dinner:{enabled:$('dinnerEnabled').checked,open:$('dinnerOpen').value,close:$('dinnerClose').value}
-    },
-    updatedAt:Date.now()
-  };
-
-  // Always save locally FIRST. Cloud is an additional copy, never the only copy.
-  await put(obj);
-
-  if(cloudGroup){
-    try{
-      photoBusy(true,'クラウドへ保存しています…');
-      await cloudSaveRestaurant(obj);
-    }catch(err){
-      console.error('cloud save error',err);
-      alert('端末には保存済みです。クラウド保存だけ失敗しました。\n通信状態を確認して、あとで再度保存してください。');
-    }finally{photoBusy(false)}
-  }
-
-  $('editorDialog').close();
-  await refresh();
 };
 $('deleteRestaurantBtn').onclick=async()=>{
   const id=$('restaurantId').value;
@@ -660,4 +713,4 @@ $('deleteRestaurantBtn').onclick=async()=>{
     if(cloudGroup){try{await cloudDeleteRestaurant(id)}catch(e){console.error(e);return alert('クラウドから削除できませんでした。通信状態を確認してください。')}}
     await del(id);$('editorDialog').close();await refresh();
   }
-};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2100').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
+};if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2111').then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('gg-sw-reloaded')){sessionStorage.setItem('gg-sw-reloaded','1');location.reload();}})}});
